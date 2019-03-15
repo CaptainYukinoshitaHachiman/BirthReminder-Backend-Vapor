@@ -13,11 +13,16 @@ import Authentication
 class UserController: RouteCollection {
     
     func boot(router: Router) throws {
-        let basicAuthMiddleware = User.basicAuthMiddleware(using: BCryptDigest())
-        let protectedRoute = router.grouped(basicAuthMiddleware)
-        protectedRoute.post(use: createHandler)
         router.get(User.parameter, use: getHandler)
         router.get("search", use: searchUsernameHandler)
+        
+        let basicAuthMiddleware = User.basicAuthMiddleware(using: BCryptDigest())
+        let basicAuthenticatedRoute = router.grouped(basicAuthMiddleware)
+        basicAuthenticatedRoute.post("login", use: loginHandler)
+        
+        let tokenAuthMiddleware = User.tokenAuthMiddleware()
+        let tokenAuthenticatedRoute = router.grouped(tokenAuthMiddleware)
+        tokenAuthenticatedRoute.post(use: createHandler)
     }
     
     func createHandler(_ request: Request) throws -> Future<User.Public> {
@@ -46,6 +51,12 @@ class UserController: RouteCollection {
             .parameters
             .next(User.self)
             .map { return $0.public }
+    }
+    
+    func loginHandler(_ request: Request) throws -> Future<Token> {
+        let user = try request.requireAuthenticated(User.self)
+        let token = try Token.generate(for: user)
+        return token.save(on: request)
     }
     
     func searchUsernameHandler(_ request: Request) throws -> Future<[User.Public]> {

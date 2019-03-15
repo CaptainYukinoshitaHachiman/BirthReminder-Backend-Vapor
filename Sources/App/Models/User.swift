@@ -24,7 +24,7 @@ final class User: Codable {
     
     private init() { fatalError() }
     
-    init(username: String, nickname: String?, password: String, permission: Permission = .user) throws {
+    init(username: String, nickname: String? = nil, password: String, permission: Permission = .user) {
         self.username = username
         self.nickname = nickname ?? username
         self.password = password
@@ -96,12 +96,18 @@ extension Future where T: User {
 
 extension User.Public: Content {}
 
-// - MARK: BasicAuthenticatable Conformance
+// - MARK: Authentication Related
 extension User: BasicAuthenticatable {
     
     static var usernameKey: WritableKeyPath<User, String> = \.username
     
     static var passwordKey: WritableKeyPath<User, String> = \.password
+    
+}
+
+extension User: TokenAuthenticatable {
+    
+    typealias TokenType = Token
     
 }
 

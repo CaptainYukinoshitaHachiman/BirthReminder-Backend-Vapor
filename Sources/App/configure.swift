@@ -19,12 +19,18 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(middlewares)
     
     // Configure a MySQL database
-    guard let url = Environment.get("MySQLDatabaseURL") else {
-        fatalError("No database url set. Use `export MySQLDatabaseURL=mysql://username:password@host:port/database` to do it.")
+    let url: String
+    if env == .production {
+        guard let unwrapped = Environment.get("MySQLDatabaseURL") else {
+            fatalError("No database url set. Use `export MySQLDatabaseURL=mysql://username:password@host:port/database` to do it.")
+        }
+        url = unwrapped
+    } else {
+        url = "mysql://root:password@localhost:3306/BirthReminder"
     }
     
     #warning("Certificate not verified")
-    let tlsConfiguration = TLSConfiguration.forClient(minimumTLSVersion: .tlsv11, certificateVerification: .none)
+    let tlsConfiguration = TLSConfiguration.forClient(minimumTLSVersion: .tlsv12, certificateVerification: .none)
     let mysqlConfig = try MySQLDatabaseConfig(url: url, capabilities: .default, characterSet: .utf8mb4_unicode_ci, transport: .customTLS(tlsConfiguration))!
     let mysql = MySQLDatabase(config: mysqlConfig)
     
@@ -38,6 +44,8 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     migrations.add(model: ACGNCharacterSet.self, database: .mysql)
     migrations.add(model: ACGNCharacter.self, database: .mysql)
     migrations.add(model: User.self, database: .mysql)
+    migrations.add(model: Token.self, database: .mysql)
+    
     services.register(migrations)
     
 }

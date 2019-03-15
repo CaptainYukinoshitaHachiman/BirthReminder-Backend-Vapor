@@ -12,11 +12,15 @@ struct CharacterSetController: RouteCollection {
     
     func boot(router: Router) throws {
         router.get(use: getAllHandler)
+        router.get(ACGNCharacterSet.parameter, use: getHandler)
         router.get(ACGNCharacterSet.parameter,"picPack", use: getPicPackHandler)
         router.get(ACGNCharacterSet.parameter,"characters", use: getCharactersHandler)
-        router.post(use: createHandler)
-        router.get(ACGNCharacterSet.parameter, use: getHandler)
-        router.delete(ACGNCharacterSet.parameter, use: deleteHandler)
+        
+        let tokenAuthMiddleware = User.tokenAuthMiddleware()
+        let guardAuthMiddleware = User.guardAuthMiddleware()
+        let protectedRoute = router.grouped([tokenAuthMiddleware,guardAuthMiddleware])
+        protectedRoute.delete(ACGNCharacterSet.parameter, use: deleteHandler)
+        protectedRoute.post(use: createHandler)
     }
     
     func getAllHandler(_ request: Request) throws -> Future<[ACGNCharacterSet.WithoutPicPack]> {
@@ -53,6 +57,11 @@ struct CharacterSetController: RouteCollection {
     }
     
     func createHandler(_ request: Request) throws -> Future<String> {
+        let user = try request.requireAuthenticated(User.self)
+        guard user.permission.rawValue >= User.Permission.contributer.rawValue else {
+            throw Abort(.forbidden, reason: "You don't have the permission to delete it.")
+        }
+        
         return try request
             .content
             .decode(ACGNCharacterSet.self)
@@ -67,6 +76,11 @@ struct CharacterSetController: RouteCollection {
     }
     
     func deleteHandler(_ request: Request) throws -> Future<HTTPStatus> {
+        let user = try request.requireAuthenticated(User.self)
+        guard user.permission.rawValue >= User.Permission.admin.rawValue else {
+            throw Abort(.forbidden, reason: "You don't have the permission to delete it.")
+        }
+        
         return try request
             .parameters
             .next(ACGNCharacterSet.self)

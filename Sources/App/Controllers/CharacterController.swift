@@ -15,10 +15,9 @@ class CharacterController: RouteCollection {
         router.get(ACGNCharacter.parameter, use: getCharacterHandler)
         router.get(ACGNCharacter.parameter, use: getPicPackHandler)
         
-        let basicAuthMiddleware = User.basicAuthMiddleware(using: BCryptDigest())
+        let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let guardAuthMiddleware = User.guardAuthMiddleware()
-        let protectedRoute = router.grouped([basicAuthMiddleware,guardAuthMiddleware])
-        
+        let protectedRoute = router.grouped([tokenAuthMiddleware,guardAuthMiddleware])
         protectedRoute.post(use: createCharacterHandler)
     }
     
